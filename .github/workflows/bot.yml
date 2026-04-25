@@ -1,9 +1,10 @@
 name: YouTube Trend Bot
 
 on:
-  schedule: # 자동으로 실행될 시간 설정
-    - cron: '0 * * * *' # 매시간 정각마다 실행 (하루 24번)
-  workflow_dispatch: # 수동으로도 버튼 눌러서 실행 가능하게 함
+  push: # 🔥 저장하자마자 1회 즉시 실행!
+  schedule:
+    - cron: '0 * * * *' # 매시간 정각마다 알아서 실행 (하루 24번)
+  workflow_dispatch: # 수동 버튼 실행
 
 jobs:
   build:
