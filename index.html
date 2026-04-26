@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JK Edit | 프리미엄 워크스페이스</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body { font-family: 'Pretendard', sans-serif; background-color: #050505; color: #e0e0e0; margin: 0; padding: 10px; height: 100vh; width: 100vw; overflow: hidden; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; }
+        .toast { position: fixed; top: -40px; left: 50%; transform: translateX(-50%); background: #d4af37; color: #000; font-weight: 800; font-size: 13px; padding: 6px 16px; border-radius: 20px; z-index: 1000; transition: top 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); pointer-events: none; box-shadow: 0 4px 10px rgba(212, 175, 55, 0.4); }
+        .toast.show { top: 15px; }
+        .panel { background: #0f0f0f; border-radius: 12px; padding: 10px; box-sizing: border-box; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .panel-title { font-size: 13px; font-weight: 800; margin: 0 0 8px 0; padding-bottom: 5px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: flex-end;}
+        
+        .top-section { display: flex; gap: 10px; height: 40%; width: 100%; }
+        
+        .panel-control { flex: 0 0 34%; border: 1px solid #d4af37; display: flex; flex-direction: column; }
+        .panel-control .panel-title { color: #d4af37; }
+        .slider-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px;}
+        input[type="range"] { flex: 1; height: 4px; accent-color: #d4af37; background: #333; border-radius: 4px; }
+        .progress-value { font-size: 14px; font-weight: 800; color: #d4af37; width: 32px; text-align: right; }
+        
+        .date-col { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+        .date-row { display: flex; align-items: center; gap: 4px; }
+        .label-wrap { display: flex; align-items: center; width: 42px; flex-shrink: 0; }
+        .input-label { font-size: 10px; color: #888; font-weight: 600; }
+        .input-wrap { display: flex; align-items: center; gap: 3px; flex: 1; min-width: 0; }
+        input[type="date"], input[type="datetime-local"] { flex: 1; min-width: 0; padding: 4px; background: #1a1a1a; border: 1px solid #333; color: #fff; font-size: 9px; border-radius: 4px; box-sizing: border-box; }
+        input[type="date"]::-webkit-calendar-picker-indicator, input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert(1); padding: 0; margin: 0; }
+        
+        .spin-group { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+        .spin-btn { background: #222; border: 1px solid #444; color: #aaa; border-radius: 3px; font-size: 8px; height: 12px; width: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .spin-btn:active { background: #d4af37; color: #000; border-color: #d4af37; }
+        
+        .stage-list { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex: 1; padding-right: 2px;}
+        .stage-list::-webkit-scrollbar { width: 2px; }
+        .stage-list::-webkit-scrollbar-thumb { background: #333; }
+        .stage-label { background: #1a1a1a; border: 1px solid #333; border-radius: 6px; padding: 5px 6px; font-size: 10px; color: #aaa; display: flex; align-items: center; cursor: pointer; position: relative; }
+        .stage-label input { margin-right: 6px; width: 10px; height: 10px; accent-color: #d4af37; }
+        .stage-text { transition: all 0.2s; }
+        input:checked + .stage-text { color: #d4af37; font-weight: bold; }
+        .stage-label.active { border-color: #d4af37; background: #1a1a1a; }
+        .stage-label.completed { background: #050505; border-color: #111; opacity: 0.7; }
+        .stage-label.completed .stage-text { text-decoration: line-through; color: #555; }
+        .stage-label.completed::after { content: '✔'; position: absolute; right: 8px; color: #555; font-size: 10px; font-weight: 700; }
+        
+        .panel-chart { flex: 1; border: 1px solid #cc0000; display: flex; flex-direction: column; min-width: 0; }
+        .panel-chart .panel-title { color: #ff4b4b; }
+        .chart-list { display: flex; flex-direction: column; justify-content: space-between; flex: 1; overflow-y: hidden; padding-right: 2px; padding-bottom: 2px; min-width: 0; }
+        .bar-group { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+        .bar-label { font-size: 10px; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+        .bar-bg { background: #222; height: 8px; border-radius: 4px; }
+        .bar-fill { background: linear-gradient(90deg, #cc0000, #ff4b4b); height: 100%; border-radius: 4px; transition: width 0.5s ease-out; }
+        .bar-value { font-size: 10px; color: #ff4b4b; text-align: right; margin-top: 1px; font-weight: bold; }
+        
+        .bottom-section { flex: 1; border: 1px solid #00e5ff; display: flex; flex-direction: column; min-height: 0; }
+        .bottom-section .panel-title { color: #00e5ff; flex-shrink: 0; align-items: center; } 
+        .trend-scroll-area { flex: 1; overflow-y: auto; padding-right: 6px; display: flex; flex-direction: column; gap: 8px; }
+        .trend-scroll-area::-webkit-scrollbar { width: 4px; }
+        .trend-scroll-area::-webkit-scrollbar-track { background: #111; border-radius: 4px; }
+        .trend-scroll-area::-webkit-scrollbar-thumb { background: #00e5ff; border-radius: 4px; }
+        .trend-link { text-decoration: none; display: block; }
+        .trend-item { background: #1a1a1a; border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; border: 1px solid #222; transition: background 0.2s; }
+        .trend-item:active { border-color: #00e5ff; background: #222; }
+        .t-rank { font-size: 16px; font-weight: 900; color: #00e5ff; width: 34px; font-style: italic; text-align: center; margin-right: 8px; flex-shrink: 0; }
+        .t-rank.r1 { color: #FFD700; font-size: 20px; } .t-rank.r2 { color: #C0C0C0; font-size: 18px; } .t-rank.r3 { color: #CD7F32; font-size: 18px; }
+        .t-info { flex: 1; min-width: 0; }
+        .t-ch-name { font-size: 14px; font-weight: 900; color: #d4af37; margin-bottom: 2px; }
+        /* 🔥 제목 여러 줄 띄우도록 설정 */
+        .t-title { font-size: 11px; color: #aaa; font-weight: 500; white-space: normal; line-height: 1.4; margin-bottom: 4px; }
+        .t-sub { font-size: 10px; color: #888; display: flex; justify-content: flex-end; align-items: center; }
+        .t-views { color: #00e5ff; font-weight: 700; }
+        .t-icon { color: #555; font-size: 14px; margin-left: 10px; flex-shrink: 0; }
+    </style>
+</head>
+<body>
+    <div class="toast" id="toast">✅ 실시간 데이터 전송됨</div>
+    
+    <div class="top-section">
+        <div class="panel panel-control">
+            <h2 class="panel-title">⚙️ 편집 진행 상황</h2>
+            <div class="slider-row"><input type="range" min="0" max="100" value="0" id="progress-slider" class="auto-save"><span class="progress-value" id="val">0%</span></div>
+            <div class="date-col">
+                <div class="date-row">
+                    <div class="label-wrap"><span class="input-label">시작일</span></div>
+                    <div class="input-wrap"><input type="date" id="start-date" value="2026-04-20" class="auto-save"><div class="spin-group"><div class="spin-btn" onclick="adjustDate('start-date', 1)">▲</div><div class="spin-btn" onclick="adjustDate('start-date', -1)">▼</div></div></div>
+                </div>
+                <div class="date-row">
+                    <div class="label-wrap"><span class="input-label">완료예상</span></div>
+                    <div class="input-wrap"><input type="datetime-local" id="end-date" value="2026-04-30T18:00" class="auto-save"><div class="spin-group"><div class="spin-btn" onclick="adjustDate('end-date', 1)">▲</div><div class="spin-btn" onclick="adjustDate('end-date', -1)">▼</div></div></div>
+                </div>
+            </div>
+            <div class="stage-list" id="stage-group">
+                <label class="stage-label active"><input type="radio" name="stage" value="0" class="auto-save" checked><span class="stage-text">1. 색상및 사운드 작업</span></label>
+                <label class="stage-label"><input type="radio" name="stage" value="1" class="auto-save"><span class="stage-text">2. 컷편집 작업</span></label>
+                <label class="stage-label"><input type="radio" name="stage" value="2" class="auto-save"><span class="stage-text">3. BGM/효과음 작업</span></label>
+                <label class="stage-label"><input type="radio" name="stage" value="3" class="auto-save"><span class="stage-text">4. 마무리 작업</span></label>
+            </div>
+        </div>
+        
+        <div class="panel panel-chart">
+            <h2 class="panel-title">📊 박과장TV <span style="font-size:10px; color:#aaa; font-weight:normal;">최근 6영상</span></h2>
+            <div class="chart-list" id="park-tv-list">
+                <div style="text-align: center; color: #888; font-size: 11px; margin-top: 30px;">데이터를 불러오는 중입니다...</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="panel bottom-section">
+        <h2 class="panel-title">
+            <span>🔥 낚시영상 롱폼 주간 순위 TOP20</span>
+            <div style="text-align: right; line-height: 1.3;">
+                <div style="color: #FFD700; font-size: 10px; font-weight: 800;" id="bot-update-time">⏳ 봇 가동 확인중...</div>
+                <div style="font-size:10px; color:#888; font-weight:normal;" id="trend-date-range">날짜 계산중...</div>
+            </div>
+        </h2>
+        <div class="trend-scroll-area" id="trend-list"><div style="text-align: center; color: #888; font-size: 12px; margin-top: 20px;">데이터를 불러오는 중입니다...</div></div>
+    </div>
+
+    <script>
+        const firebaseConfig = { apiKey: "AIzaSyDYNvp9g50fl2XscNbUQV_B18i8v-wS4Tc", authDomain: "workspace-f5b94.firebaseapp.com", databaseURL: "https://workspace-f5b94-default-rtdb.firebaseio.com", projectId: "workspace-f5b94", storageBucket: "workspace-f5b94.firebasestorage.app", messagingSenderId: "24233341770", appId: "1:24233341770:web:622bfd0a46db9afdc5c7b3" };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        const tNow = new Date();
+        const tPast = new Date(tNow.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const fmtDate = (d) => `${d.getFullYear().toString().slice(2)}.${('0'+(d.getMonth()+1)).slice(-2)}.${('0'+d.getDate()).slice(-2)}`;
+        document.getElementById('trend-date-range').innerText = `${fmtDate(tPast)} ~ ${fmtDate(tNow)} 기준`;
+
+        database.ref('updateTime').on('value', (snapshot) => {
+            const timeData = snapshot.val();
+            if (timeData && timeData.time) {
+                document.getElementById('bot-update-time').innerText = `🔄 봇 최근 가동: ${timeData.time}`;
+            }
+        });
+
+        const parkListEl = document.getElementById('park-tv-list');
+        database.ref('parkData').on('value', (snapshot) => {
+            const pData = snapshot.val();
+            if (pData) {
+                let html = '';
+                let maxViews = 0;
+                pData.forEach(v => { if (v.v_int > maxViews) maxViews = v.v_int; });
+                
+                pData.forEach(p => {
+                    let pct = maxViews > 0 ? (p.v_int / maxViews) * 100 : 0;
+                    html += `
+                        <div class="bar-group">
+                            <div class="bar-label">${p.title}</div>
+                            <div class="bar-bg"><div class="bar-fill" style="width: ${pct}%;"></div></div>
+                            <div class="bar-value">${p.v}회</div>
+                        </div>
+                    `;
+                });
+                parkListEl.innerHTML = html;
+            }
+        });
+
+        const trendListEl = document.getElementById('trend-list');
+        database.ref('trendData').on('value', (snapshot) => {
+            const trends = snapshot.val();
+            if (trends) {
+                let html = '';
+                trends.forEach((t, i) => {
+                    let rankCls = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
+                    let link = `https://www.youtube.com/watch?v=${t.id}`;
+                    html += `
+                        <a href="${link}" target="_blank" class="trend-link">
+                            <div class="trend-item">
+                                <div class="t-rank ${rankCls}">${i+1}위</div>
+                                <div class="t-info">
+                                    <div class="t-ch-name">${t.ch}</div>
+                                    <div class="t-title">${t.title}</div>
+                                    <div class="t-sub">
+                                        <span style="color: #999; margin-right: 6px; font-size: 9px;">[${t.v_count}개 영상 합산]</span>
+                                        <span class="t-views">${t.v}회</span>
+                                    </div>
+                                </div>
+                                <div class="t-icon">▶</div>
+                            </div>
+                        </a>
+                    `;
+                });
+                trendListEl.innerHTML = html;
+            }
+        });
+
+        const slider = document.getElementById('progress-slider'), valText = document.getElementById('val'), startDate = document.getElementById('start-date'), endDate = document.getElementById('end-date'), stages = document.querySelectorAll('input[name="stage"]'), stageLabels = document.querySelectorAll('.stage-label');
+        let toastTimer;
+        
+        function updateStageStyles(activeIndex) { stageLabels.forEach((label, index) => { label.classList.remove('completed', 'active'); if (index < activeIndex) { label.classList.add('completed'); } else if (index === activeIndex) { label.classList.add('active'); } }); }
+        
+        function pushDataToFirebase() { 
+            const currentProgress = slider.value, currentStartDate = startDate.value, currentEndDate = endDate.value; 
+            let currentStage = 0; stages.forEach((s, idx) => { if(s.checked) currentStage = idx; }); 
+            database.ref('projectData').set({ progress: currentProgress, startDate: currentStartDate, endDate: currentEndDate, stage: currentStage }).then(() => { 
+                const toast = document.getElementById('toast'); toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => { toast.classList.remove('show'); }, 1500); 
+            }); 
+        }
+        
+        document.querySelectorAll('.auto-save').forEach(input => { input.addEventListener('change', pushDataToFirebase); });
+        
+        slider.addEventListener('input', function() { let val = parseInt(this.value); valText.innerText = val + '%'; let i = val < 25 ? 0 : val < 50 ? 1 : val < 75 ? 2 : 3; stages[i].checked = true; updateStageStyles(i); });
+        stages.forEach((stage, index) => { stage.addEventListener('change', function() { let v = index === 0 ? 25 : index === 1 ? 50 : index === 2 ? 75 : 100; slider.value = v; valText.innerText = v + '%'; updateStageStyles(index); }); });
+
+        window.adjustDate = function(inputId, delta) { const inputEl = document.getElementById(inputId); if (delta > 0) { inputEl.stepUp(); } else { inputEl.stepDown(); } pushDataToFirebase(); };
+
+        database.ref('projectData').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                slider.value = data.progress || 0;
+                valText.innerText = (data.progress || 0) + '%';
+                if (data.startDate) startDate.value = data.startDate;
+                if (data.endDate) endDate.value = data.endDate;
+                let currentStage = data.stage || 0;
+                stages.forEach((s, idx) => { s.checked = (idx === currentStage); });
+                updateStageStyles(currentStage);
+            }
+        });
+    </script>
+</body>
+</html>
