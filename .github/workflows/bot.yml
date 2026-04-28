@@ -1,26 +1,28 @@
-name: YouTube Trend Bot
+name: 낚시 랭킹 자동 업데이트
 
 on:
-  push: # 🔥 저장하자마자 1회 즉시 실행!
   schedule:
-    - cron: '0 * * * *' # 매시간 정각마다 알아서 실행 (하루 24번)
-  workflow_dispatch: # 수동 버튼 실행
+    # 한국 시간 기준 매일 오전 9시, 오후 9시에 실행! (UTC 기준 0시, 12시)
+    - cron: '0 0,12 * * *'
+  workflow_dispatch: # 우리가 원할 때 수동으로 버튼 눌러서 실행할 수 있는 기능!
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
     - uses: actions/checkout@v3
-    
-    - name: 파이썬 설치
+
+    - name: 파이썬 환경 세팅
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
-        
-    - name: 유튜브 통신 부품(라이브러리) 설치
+
+    - name: 필요한 부품(라이브러리) 설치
       run: |
         python -m pip install --upgrade pip
         pip install google-api-python-client
-        
-    - name: 파이썬 봇 실행!
+
+    - name: 파이썬 로봇 실행!
+      # ⚠️ 만약 파이썬 파일 이름이 다르면 아래 youtube_bot.py 부분을 수정해주세요!
       run: python youtube_bot.py
