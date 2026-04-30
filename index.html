@@ -68,7 +68,6 @@
         .t-rank.r1 { color: #FFD700; font-size: 20px; } .t-rank.r2 { color: #C0C0C0; font-size: 18px; } .t-rank.r3 { color: #CD7F32; font-size: 18px; }
         .t-info { flex: 1; min-width: 0; }
         .t-ch-name { font-size: 14px; font-weight: 900; color: #d4af37; margin-bottom: 2px; }
-        /* 🔥 제목 여러 줄 띄우도록 설정 */
         .t-title { font-size: 11px; color: #aaa; font-weight: 500; white-space: normal; line-height: 1.4; margin-bottom: 4px; }
         .t-sub { font-size: 10px; color: #888; display: flex; justify-content: flex-end; align-items: center; }
         .t-views { color: #00e5ff; font-weight: 700; }
@@ -129,28 +128,33 @@
         const fmtDate = (d) => `${d.getFullYear().toString().slice(2)}.${('0'+(d.getMonth()+1)).slice(-2)}.${('0'+d.getDate()).slice(-2)}`;
         document.getElementById('trend-date-range').innerText = `${fmtDate(tPast)} ~ ${fmtDate(tNow)} 기준`;
 
+        // 🔥 오류 수정 1: 업데이트 시간 데이터 형식 방어
         database.ref('updateTime').on('value', (snapshot) => {
             const timeData = snapshot.val();
-            if (timeData && timeData.time) {
-                document.getElementById('bot-update-time').innerText = `🔄 봇 최근 가동: ${timeData.time}`;
+            if (timeData) {
+                let timeStr = typeof timeData === 'object' ? timeData.time : timeData;
+                document.getElementById('bot-update-time').innerText = `🔄 봇 최근 가동: ${timeStr}`;
             }
         });
 
+        // 🔥 오류 수정 2: 박과장TV 배열/객체 혼용 문제 방어
         const parkListEl = document.getElementById('park-tv-list');
         database.ref('parkData').on('value', (snapshot) => {
             const pData = snapshot.val();
             if (pData) {
+                let pArray = Array.isArray(pData) ? pData : Object.values(pData);
                 let html = '';
                 let maxViews = 0;
-                pData.forEach(v => { if (v.v_int > maxViews) maxViews = v.v_int; });
+                pArray.forEach(v => { if (v.v_int > maxViews) maxViews = v.v_int; });
                 
-                pData.forEach(p => {
+                pArray.forEach(p => {
                     let pct = maxViews > 0 ? (p.v_int / maxViews) * 100 : 0;
+                    let views = p.v || (p.v_int ? p.v_int.toLocaleString() : 0);
                     html += `
                         <div class="bar-group">
                             <div class="bar-label">${p.title}</div>
                             <div class="bar-bg"><div class="bar-fill" style="width: ${pct}%;"></div></div>
-                            <div class="bar-value">${p.v}회</div>
+                            <div class="bar-value">${views}회</div>
                         </div>
                     `;
                 });
@@ -158,14 +162,26 @@
             }
         });
 
+        // 🔥 오류 수정 3: 트렌드 배열 처리, undefined 변수, 정렬 완벽 방어
         const trendListEl = document.getElementById('trend-list');
         database.ref('trendData').on('value', (snapshot) => {
             const trends = snapshot.val();
             if (trends) {
+                // 데이터가 딕셔너리로 오든 리스트로 오든 무조건 배열로 변환
+                let trendArray = Array.isArray(trends) ? trends : Object.values(trends);
+                
+                // 조회수(v_int) 기준으로 무조건 내림차순 정렬 (혹시 모를 순위 뒤죽박죽 방지)
+                trendArray.sort((a, b) => (b.v_int || 0) - (a.v_int || 0));
+
                 let html = '';
-                trends.forEach((t, i) => {
+                trendArray.forEach((t, i) => {
                     let rankCls = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
-                    let link = `https://www.youtube.com/watch?v=${t.id}`;
+                    let link = t.id ? `https://www.youtube.com/watch?v=${t.id}` : '#';
+                    
+                    // 핵심 에러 원인 해결: 이름표가 v_count이든, video_count이든, count이든 다 잡아냄
+                    let vCount = t.video_count || t.v_count || t.count || 1; 
+                    let views = t.v || (t.v_int ? t.v_int.toLocaleString() : 0);
+
                     html += `
                         <a href="${link}" target="_blank" class="trend-link">
                             <div class="trend-item">
@@ -174,8 +190,8 @@
                                     <div class="t-ch-name">${t.ch}</div>
                                     <div class="t-title">${t.title}</div>
                                     <div class="t-sub">
-                                        <span style="color: #999; margin-right: 6px; font-size: 9px;">[${t.v_count}개 영상 합산]</span>
-                                        <span class="t-views">${t.v}회</span>
+                                        <span style="color: #999; margin-right: 6px; font-size: 9px;">[${vCount}개 영상 합산]</span>
+                                        <span class="t-views">${views}회</span>
                                     </div>
                                 </div>
                                 <div class="t-icon">▶</div>
@@ -187,6 +203,7 @@
             }
         });
 
+        // 진행률 패널 스크립트 (기존과 동일)
         const slider = document.getElementById('progress-slider'), valText = document.getElementById('val'), startDate = document.getElementById('start-date'), endDate = document.getElementById('end-date'), stages = document.querySelectorAll('input[name="stage"]'), stageLabels = document.querySelectorAll('.stage-label');
         let toastTimer;
         
