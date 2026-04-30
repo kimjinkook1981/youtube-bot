@@ -10,7 +10,7 @@ FIREBASE_URL_TREND = "https://workspace-f5b94-default-rtdb.firebaseio.com/trendD
 FIREBASE_URL_PARK = "https://workspace-f5b94-default-rtdb.firebaseio.com/parkData.json"
 FIREBASE_URL_TIME = "https://workspace-f5b94-default-rtdb.firebaseio.com/updateTime.json" # 🔥 출근 도장용 주소 추가!
 
-BLACKLIST = ["국방", "뉴스", "정치", "경제", "특보", "KBS", "MBC", "SBS", "YTN", "JTBC", "MBN", "채널A", "TV조선", "연합", "이슈", "신인균", "HaloFish", "HalFish"]
+BLACKLIST = ["국방", "EBSDocumentary (EBS 다큐)", "뉴스", "윤택TV", "정치", "경제", "특보", "KBS", "MBC", "SBS", "YTN", "JTBC", "MBN", "채널A", "TV조선", "연합", "이슈", "신인균", "HaloFish", "HalFish"]
 
 def parse_duration(duration_str):
     match = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', duration_str)
